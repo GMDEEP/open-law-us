@@ -49,3 +49,9 @@ def test_rejects_unofficial_source():
     import pytest
     with pytest.raises(ValueError):
         common.check_source("https://example.com/law")
+
+
+def test_status_only_from_leading_words():
+    assert fl_statutes.detect_status("Repealed statute not revived by implication.", "No statute...") == "active"
+    assert fl_statutes.detect_status("Transfer of tax certificates.", "may be transferred") == "active"
+    assert fl_statutes.detect_status("Repealed by s. 3, ch. 2019-1.", "") == "repealed"

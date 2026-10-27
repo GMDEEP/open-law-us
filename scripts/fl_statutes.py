@@ -102,14 +102,14 @@ def body_text(section: Tag) -> str:
 
 
 def detect_status(catchline: str, body: str) -> str:
-    probe = (catchline + " " + body[:200]).lower()
-    if re.search(r"\brepealed\b", probe) and len(body) < 400:
-        return "repealed"
-    if re.search(r"\btransferred\b", probe) and len(body) < 400:
-        return "transferred"
-    if re.search(r"\brenumbered\b", probe) and len(body) < 400:
-        return "renumbered"
-    if re.search(r"\breserved\b", probe) and len(body) < 200:
+    """The current edition prints only live law, so a section is only marked
+    repealed/transferred/renumbered/reserved when it *begins* that way
+    (e.g. a catchline of "Repealed by s. 2, ch. 2010-5.")."""
+    lead = (catchline or body).strip().lower()
+    m = re.match(r"^\[?(repealed|transferred|renumbered)\]?(\s+(by|to|as|effective|in|pursuant)\b|\s*[.,;:\u2014-]|$)", lead)
+    if m:
+        return m.group(1)
+    if re.match(r"^\[?reserved\]?\.?$", lead):
         return "reserved"
     return "active"
 
