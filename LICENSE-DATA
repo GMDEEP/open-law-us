@@ -1,0 +1,12 @@
+CC0 1.0 Universal (Public Domain Dedication)
+
+To the extent possible under law, the contributors to open-law-us have waived
+all copyright and related or neighboring rights to the metadata, indexes,
+manifests, and schemas in this repository (the frontmatter of files under
+states/, manifest.json, every index.jsonl, and the schema/ directory).
+
+This dedication does not apply to the text of the law itself, which is already
+in the public domain and is not ours to license, or to the code, which is
+licensed under the MIT License (see LICENSE).
+
+Full legal text: https://creativecommons.org/publicdomain/zero/1.0/legalcode

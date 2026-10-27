@@ -1,0 +1,16 @@
+name: New state
+description: Propose adding a state (or a new collection for a state)
+labels: ["new-state"]
+body:
+  - type: input
+    id: state
+    attributes: {label: State}
+    validations: {required: true}
+  - type: input
+    id: source
+    attributes: {label: Official source URL(s)}
+    validations: {required: true}
+  - type: textarea
+    id: copyright
+    attributes: {label: Copyright position, description: "Does the state claim copyright in its code? Cite your source."}
+    validations: {required: true}

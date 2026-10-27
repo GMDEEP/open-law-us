@@ -1,0 +1,16 @@
+name: Content error
+description: A document doesn't match its official source
+labels: ["content-error"]
+body:
+  - type: input
+    id: file
+    attributes: {label: File or citation, placeholder: "states/fl/statutes/title-vi/chapter-0061/61.13.md"}
+    validations: {required: true}
+  - type: input
+    id: source
+    attributes: {label: Official source URL}
+    validations: {required: true}
+  - type: textarea
+    id: details
+    attributes: {label: What's wrong?}
+    validations: {required: true}

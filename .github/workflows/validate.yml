@@ -1,0 +1,45 @@
+# The maintainer bot's checks. Runs on every pull request. A human still has to
+# approve before anything merges.
+name: validate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Tests
+        run: python -m pytest -q tests
+      - name: Validate documents (schema, official source, hash, privacy)
+        run: python scripts/validate.py
+      - name: Indexes are up to date
+        run: |
+          python scripts/build_index.py
+          git diff --exit-code -- manifest.json 'states/**/index.jsonl' || {
+            echo "::error::Run python scripts/build_index.py and commit the result."; exit 1; }
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  label:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,33 @@
+{
+  "code": "fl",
+  "name": "Florida",
+  "collections": {
+    "statutes": {
+      "id": "fl-statutes",
+      "type": "statute",
+      "title": "Florida Statutes",
+      "source": "https://www.leg.state.fl.us/statutes/",
+      "source_name": "Online Sunshine (The Florida Legislature)",
+      "update_schedule": "Checked weekly; the Legislature publishes a new edition each year after session.",
+      "copyright_note": "Not claimed by the State of Florida. Government edicts; public domain. See states/fl/README.md."
+    },
+    "rules": {
+      "id": "fl-rules",
+      "type": "rule",
+      "title": "Florida Rules of Court",
+      "source": "https://www.floridabar.org/rules/ctproc/",
+      "source_name": "Rules adopted by the Supreme Court of Florida (compiled by The Florida Bar)",
+      "update_schedule": "Checked weekly; rules are amended by the Supreme Court of Florida.",
+      "copyright_note": "Rule text is a judicial edict (public domain). Bar editorial matter is excluded."
+    },
+    "opinions": {
+      "id": "fl-opinions",
+      "type": "opinion",
+      "title": "Florida family-law appellate opinions",
+      "source": "https://www.courtlistener.com/",
+      "source_name": "CourtListener (Free Law Project)",
+      "update_schedule": "Checked weekly for newly filed opinions.",
+      "copyright_note": "Judicial opinions are public domain. Free Law Project does not endorse this project."
+    }
+  }
+}

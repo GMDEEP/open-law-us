@@ -1,0 +1,15 @@
+"state:fl":
+  - changed-files:
+      - any-glob-to-any-file: "states/fl/**"
+"type:statute":
+  - changed-files:
+      - any-glob-to-any-file: "states/*/statutes/**"
+"type:rule":
+  - changed-files:
+      - any-glob-to-any-file: "states/*/rules/**"
+"type:opinion":
+  - changed-files:
+      - any-glob-to-any-file: "states/*/opinions/**"
+"code":
+  - changed-files:
+      - any-glob-to-any-file: ["scripts/**", ".github/**", "tests/**"]

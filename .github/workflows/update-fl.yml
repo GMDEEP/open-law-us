@@ -1,0 +1,124 @@
+# Weekly Florida update. Each run fetches, checks, records a log, opens a PR if
+# anything changed, and stops. A suspicious run is stopped with no commit and an
+# issue is opened instead.
+name: update-florida
+
+on:
+  schedule:
+    - cron: "17 8 * * 1"   # Mondays 08:17 UTC (about 4 AM Eastern)
+  workflow_dispatch:
+    inputs:
+      chapters:
+        description: "Only these statute chapters, e.g. 61,90 (blank = all)"
+        required: false
+        default: ""
+      allow_large:
+        description: "Allow more than 15% of files to change (new annual edition)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: update-florida
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  statuses: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN_ID: ${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Fetch statutes
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.chapters }}" ]; then ARGS="--chapters ${{ inputs.chapters }}"; fi
+          python scripts/fl_statutes.py $ARGS --summary /tmp/statutes.json
+
+      - name: Safety check (statutes)
+        run: |
+          ARGS=""
+          if [ "${{ inputs.allow_large }}" = "true" ]; then ARGS="--allow-large"; fi
+          python scripts/guard.py states/fl/statutes --summary /tmp/statutes.json --report /tmp/guard-statutes.json $ARGS
+
+      - name: Fetch opinions
+        env:
+          COURTLISTENER_TOKEN: ${{ secrets.COURTLISTENER_TOKEN }}
+        run: python scripts/fl_opinions.py --budget 100 --summary /tmp/opinions.json
+
+      - name: Safety check (opinions)
+        run: python scripts/guard.py states/fl/opinions --summary /tmp/opinions.json --report /tmp/guard-opinions.json
+
+      - name: Build indexes and validate
+        run: |
+          python scripts/build_index.py
+          python scripts/validate.py
+          python -m pytest -q tests
+
+      - name: Record run
+        id: record
+        run: |
+          python scripts/record_run.py --state fl --run-id "$RUN_ID" \
+            --summaries /tmp/statutes.json /tmp/opinions.json \
+            --guards /tmp/guard-statutes.json /tmp/guard-opinions.json \
+            --pr-body /tmp/pr.md | tee /tmp/record.txt
+          if grep -q '^CHANGED$' /tmp/record.txt; then echo "changed=true" >> "$GITHUB_OUTPUT"; else echo "changed=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Open pull request with the changes
+        if: steps.record.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          BRANCH="auto/fl-$(date -u +%Y-%m-%d)-$RUN_ID"
+          git checkout -b "$BRANCH"
+          git add states manifest.json runs
+          git commit -q -m "Florida weekly update $(date -u +%Y-%m-%d)" -m "$(head -c 3000 /tmp/record.txt)"
+          git push -q origin "$BRANCH"
+          gh label create automated-update --color 0E8A16 --description "Opened by the weekly update" --force >/dev/null
+          gh pr create --base main --head "$BRANCH" --title "Florida weekly update $(date -u +%Y-%m-%d)" \
+            --body-file /tmp/pr.md --label automated-update
+          # PRs opened by this token don't trigger other workflows, so report the
+          # checks that just passed in this run as the required "validate" status.
+          gh api "repos/${{ github.repository }}/statuses/$(git rev-parse HEAD)" \
+            -f state=success -f context=validate \
+            -f description="Schema, source allowlist, hashes, privacy scan and tests passed in the update run" \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/$RUN_ID" >/dev/null
+
+      - name: Record a no-change run
+        if: steps.record.outputs.changed == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          LOG=$(ls -t runs/*.json | head -1); cp "$LOG" /tmp/runlog.json
+          if git fetch -q origin run-logs; then git checkout -q -B run-logs FETCH_HEAD; else git checkout -q --orphan run-logs && git rm -rq --cached . && git clean -fdq; fi
+          mkdir -p runs && cp /tmp/runlog.json "runs/$(basename "$LOG")"
+          git add runs && git commit -q -m "Run log $(date -u +%Y-%m-%d): no changes" && git push -q origin run-logs
+
+      - name: Open an issue if the run stopped
+        if: failure()
+        run: |
+          {
+            echo "The weekly Florida update stopped before committing anything."
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/$RUN_ID"
+            for f in /tmp/guard-*.json; do [ -f "$f" ] && { echo; echo '```json'; head -c 4000 "$f"; echo; echo '```'; }; done
+            echo
+            echo "Nothing was changed. Fix the cause (or re-run with allow_large for a new annual edition), then run the workflow again."
+          } > /tmp/issue.md
+          gh label create update-stopped --color B60205 --description "Weekly update stopped" --force >/dev/null
+          gh issue create --title "Florida update stopped (run $RUN_ID)" --body-file /tmp/issue.md --label update-stopped

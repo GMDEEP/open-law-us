@@ -1,0 +1,11 @@
+{
+  "_comment": "Official publishers only. A source_url must be on one of these hosts (or a subdomain). Add new hosts by pull request with a reason.",
+  "domains": [
+    "leg.state.fl.us",
+    "flsenate.gov",
+    "flcourts.gov",
+    "floridasupremecourt.org",
+    "floridabar.org",
+    "courtlistener.com"
+  ]
+}
