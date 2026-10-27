@@ -16,17 +16,14 @@ jobs:
           UA="open-law-us/0.1 (+https://github.com/GMDEEP/open-law-us; stewart@leadmachinellc.com)"
           B="https://www.leg.state.fl.us/statutes/index.cfm"
           get(){ curl -sSL -A "$UA" -w "%{http_code} %{url_effective}\n" -o "out/$1" "$2" >> out/_status.txt; sleep 3; }
-          get title_index.html "$B?Mode=View%20Statutes&Submenu=1&Tab=statutes"
-          get title_vi.html "$B?App_mode=Display_Index&Title_Request=VI"
-          get ch61_contents.html "$B?App_mode=Display_Statute&URL=0000-0099/0061/0061ContentsIndex.html"
-          get s61_13.html "$B?App_mode=Display_Statute&URL=0000-0099/0061/Sections/0061.13.html"
-          get ch61_full.html "$B?App_mode=Display_Statute&URL=0000-0099/0061/0061.html"
-          get s90_401.html "$B?App_mode=Display_Statute&URL=0000-0099/0090/Sections/0090.401.html"
-          get robots.txt "https://www.leg.state.fl.us/robots.txt"
-          get bar_rules.html "https://www.floridabar.org/rules/ctproc/"
-          get cl_courts_fla.json "https://www.courtlistener.com/api/rest/v4/courts/?id=fla"
-          get cl_courts_dca.json "https://www.courtlistener.com/api/rest/v4/courts/?jurisdiction=S&id__startswith=fla"
-          curl -sS "https://com-courtlistener-storage.s3-us-west-2.amazonaws.com/?list-type=2&prefix=bulk-data/&max-keys=1000" -o out/cl_bulk_list.xml -w "%{http_code} s3list\n" >> out/_status.txt
+          get family_rules.pdf "https://www-media.floridabar.org/uploads/2026/09/2027_04-OCT-Family-Law-Rules-of-Procedure-10-1-2026.pdf"
+          get flcourts_rules.html "https://www.flcourts.gov/Resources-Services/Office-of-the-State-Courts-Administrator/Florida-Court-Rules"
+          get cl_search.json "https://www.courtlistener.com/api/rest/v4/search/?type=o&court=fladistctapp&q=%22parenting%20plan%22&order_by=dateFiled%20desc"
+          get cl_dca_court.json "https://www.courtlistener.com/api/rest/v4/courts/fladistctapp/"
+          get cl_courts_fl.json "https://www.courtlistener.com/api/rest/v4/courts/?jurisdiction=S&short_name__icontains=Florida"
+          get cl_opinions.json "https://www.courtlistener.com/api/rest/v4/opinions/?cluster__docket__court=fladistctapp&page_size=1"
+          get ch741_full.html "$B?App_mode=Display_Statute&URL=0700-0799/0741/0741.html"
+          get title_xliii.html "$B?App_mode=Display_Index&Title_Request=XLIII"
           ls -la out >> out/_status.txt
       - name: Commit samples to probe-out
         run: |
