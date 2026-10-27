@@ -24,6 +24,7 @@ def test_parses_sections_and_numbering():
     assert meta["chapter_name"] == "SAMPLE CHAPTER FOR TESTS"
     assert "(2) Its purposes are:" in text
     assert "(b) To keep nesting." in text
+    assert text.startswith("# § 999.01 Purpose.")
     assert text.strip().endswith("History: s. 1, ch. 2000-1.")
     assert meta["source_url"].endswith("URL=0900-0999/0999/Sections/0999.01.html")
 

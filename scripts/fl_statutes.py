@@ -138,11 +138,11 @@ def parse_chapter(html: str, chapter_path: str, edition: str, title_num: str,
         if not body and not history:
             # A section page with only a catchline (e.g. "Repealed by ...")
             body = catchline
-        text = body
-        if notes:
-            text += "\n\n" + "\n\n".join(notes)
+        text = f"# § {number} {catchline}".rstrip() + "\n\n" + body
         if history:
             text += "\n\nHistory: " + history
+        if notes:
+            text += "\n\n" + "\n\n".join(notes)
         meta = {
             "id": f"fl/statutes/{number}",
             "jurisdiction": "fl",
