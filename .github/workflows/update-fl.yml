@@ -90,8 +90,16 @@ jobs:
           git commit -q -m "Florida weekly update $(date -u +%Y-%m-%d)" -m "$(head -c 3000 /tmp/record.txt)"
           git push -q origin "$BRANCH"
           gh label create automated-update --color 0E8A16 --description "Opened by the weekly update" --force >/dev/null
-          gh pr create --base main --head "$BRANCH" --title "Florida weekly update $(date -u +%Y-%m-%d)" \
-            --body-file /tmp/pr.md --label automated-update
+          if ! gh pr create --base main --head "$BRANCH" --title "Florida weekly update $(date -u +%Y-%m-%d)" \
+              --body-file /tmp/pr.md --label automated-update; then
+            # Repo setting "Allow GitHub Actions to create pull requests" is off:
+            # leave the branch and open an issue linking to it instead.
+            COMPARE="${{ github.server_url }}/${{ github.repository }}/compare/main...$BRANCH?expand=1"
+            { echo "A weekly update is ready for review on branch \`$BRANCH\`."; echo;
+              echo "Open a pull request for it here: $COMPARE"; echo; cat /tmp/pr.md; } > /tmp/issue-pr.md
+            gh issue create --title "Florida weekly update ready $(date -u +%Y-%m-%d)" \
+              --body-file /tmp/issue-pr.md --label automated-update
+          fi
           # PRs opened by this token don't trigger other workflows, so report the
           # checks that just passed in this run as the required "validate" status.
           gh api "repos/${{ github.repository }}/statuses/$(git rev-parse HEAD)" \
