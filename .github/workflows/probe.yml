@@ -1,0 +1,39 @@
+name: probe-sources
+on:
+  push:
+    branches: [probe]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch samples
+        run: |
+          set +e
+          mkdir -p out
+          UA="open-law-us/0.1 (+https://github.com/GMDEEP/open-law-us; stewart@leadmachinellc.com)"
+          B="https://www.leg.state.fl.us/statutes/index.cfm"
+          get(){ curl -sSL -A "$UA" -w "%{http_code} %{url_effective}\n" -o "out/$1" "$2" >> out/_status.txt; sleep 3; }
+          get title_index.html "$B?Mode=View%20Statutes&Submenu=1&Tab=statutes"
+          get title_vi.html "$B?App_mode=Display_Index&Title_Request=VI"
+          get ch61_contents.html "$B?App_mode=Display_Statute&URL=0000-0099/0061/0061ContentsIndex.html"
+          get s61_13.html "$B?App_mode=Display_Statute&URL=0000-0099/0061/Sections/0061.13.html"
+          get ch61_full.html "$B?App_mode=Display_Statute&URL=0000-0099/0061/0061.html"
+          get s90_401.html "$B?App_mode=Display_Statute&URL=0000-0099/0090/Sections/0090.401.html"
+          get robots.txt "https://www.leg.state.fl.us/robots.txt"
+          get bar_rules.html "https://www.floridabar.org/rules/ctproc/"
+          get cl_courts_fla.json "https://www.courtlistener.com/api/rest/v4/courts/?id=fla"
+          get cl_courts_dca.json "https://www.courtlistener.com/api/rest/v4/courts/?jurisdiction=S&id__startswith=fla"
+          curl -sS "https://com-courtlistener-storage.s3-us-west-2.amazonaws.com/?list-type=2&prefix=bulk-data/&max-keys=1000" -o out/cl_bulk_list.xml -w "%{http_code} s3list\n" >> out/_status.txt
+          ls -la out >> out/_status.txt
+      - name: Commit samples to probe-out
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan probe-out
+          git rm -rf --cached . >/dev/null
+          git add out
+          git commit -m "probe output" -q
+          git push -f origin probe-out
