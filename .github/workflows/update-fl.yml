@@ -4,6 +4,10 @@
 name: update-florida
 
 on:
+  # Pushing a branch named run/<anything> starts a full update (useful when the
+  # Actions page can't be reached). The branch can be deleted afterwards.
+  push:
+    branches: ["run/**"]
   schedule:
     - cron: "17 8 * * 1"   # Mondays 08:17 UTC (about 4 AM Eastern)
   workflow_dispatch:
