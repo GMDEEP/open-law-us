@@ -1,0 +1,50 @@
+{
+  "run_id": "40592754999",
+  "finished_at": "2026-10-27T22:46:32+00:00",
+  "state": "fl",
+  "collections": [
+    {
+      "collection": "fl-statutes",
+      "counts": {
+        "added": 24993,
+        "changed": 0,
+        "unchanged": 0,
+        "removed": 0,
+        "errors": 0,
+        "chapters": 638,
+        "requests": 688
+      },
+      "errors": [],
+      "full_run": true
+    },
+    {
+      "collection": "fl-opinions",
+      "skipped": "token missing (add COURTLISTENER_TOKEN secret)",
+      "counts": {
+        "requests": 0,
+        "errors": 0
+      }
+    }
+  ],
+  "guards": [
+    {
+      "collection_path": "states/fl/statutes",
+      "existing_files": 0,
+      "added": 24993,
+      "modified": 0,
+      "deleted": 0,
+      "shrunk_over_half": [],
+      "deleted_files": [],
+      "ok": true,
+      "problems": []
+    },
+    {
+      "collection_path": "states/fl/opinions",
+      "ok": true,
+      "skipped": "token missing (add COURTLISTENER_TOKEN secret)",
+      "problems": [],
+      "shrunk_over_half": [],
+      "deleted_files": []
+    }
+  ]
+}

@@ -17,9 +17,9 @@
           "update_schedule": "Checked weekly; the Legislature publishes a new edition each year after session.",
           "copyright_note": "Not claimed by the State of Florida. Government edicts; public domain. See states/fl/README.md.",
           "path": "states/fl/statutes",
-          "index": null,
-          "item_count": 0,
-          "last_changed": null
+          "index": "states/fl/statutes/index.jsonl",
+          "item_count": 24993,
+          "last_changed": "2026-10-27"
         },
         {
           "id": "fl-rules",
