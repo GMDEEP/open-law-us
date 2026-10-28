@@ -1,0 +1,38 @@
+# Monthly spot-check: re-download random sections from the official site and
+# compare them word for word with the stored copies. Opens an issue on mismatch.
+name: verify-sample
+
+on:
+  schedule:
+    - cron: "41 9 1 * *"   # 1st of each month
+  workflow_dispatch:
+  push:
+    branches: ["verify/**"]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Compare 40 random sections with the official site
+        run: python scripts/verify_sample.py --state fl --n 40 --report /tmp/verify.json | tee /tmp/verify.txt
+      - name: Open an issue on mismatch
+        if: failure()
+        run: |
+          { echo "The monthly spot-check found stored sections that differ from the official text."; echo;
+            echo '```'; tail -50 /tmp/verify.txt; echo '```'; echo;
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"; } > /tmp/issue.md
+          gh label create content-error --color D93F0B --force >/dev/null
+          gh issue create --title "Spot-check mismatch $(date -u +%Y-%m-%d)" --body-file /tmp/issue.md --label content-error
