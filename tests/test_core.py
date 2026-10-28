@@ -55,3 +55,9 @@ def test_status_only_from_leading_words():
     assert fl_statutes.detect_status("Repealed statute not revived by implication.", "No statute...") == "active"
     assert fl_statutes.detect_status("Transfer of tax certificates.", "may be transferred") == "active"
     assert fl_statutes.detect_status("Repealed by s. 3, ch. 2019-1.", "") == "repealed"
+
+
+def test_email_check_allows_only_government_domains():
+    import validate
+    assert validate.unofficial_emails("Write to SAMH.jitp@myflfamilies.com or clerk@flcourts.gov") == []
+    assert validate.unofficial_emails("contact jane@gmail.com") == ["jane@gmail.com"]

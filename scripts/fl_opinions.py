@@ -40,6 +40,12 @@ TOPICS = {
     "paternity": r"\bpaternity\b",
     "domestic-violence": r"domestic violence|injunction for protection",
 }
+RULE_QUERY = '(caseName:("In re: Amendments" OR "In re Amendments") AND (rule OR rules))'
+# Each profile: (state key, courts, query, extra topic tag, share of the run's request budget)
+PROFILES = [
+    ("family", list(COURTS), QUERY, None, 0.6),
+    ("rule-amendments", ["fla"], RULE_QUERY, "rule-amendment", 0.4),
+]
 STATE_PATH = ROOT / "states/fl/opinions/_state.json"
 
 
@@ -66,8 +72,8 @@ def cited_statutes(text: str) -> list[str]:
     return sorted(set(found), key=lambda s: [int(p) for p in s.split(".")])[:100]
 
 
-def search_url(court: str, filed_after: str | None, filed_before: str | None) -> str:
-    params = {"type": "o", "court": court, "q": QUERY, "order_by": "dateFiled desc",
+def search_url(court: str, filed_after: str | None, filed_before: str | None, query: str = QUERY) -> str:
+    params = {"type": "o", "court": court, "q": query, "order_by": "dateFiled desc",
               "stat_Published": "on"}
     if filed_after:
         params["filed_after"] = filed_after
@@ -93,64 +99,71 @@ def run(budget: int) -> dict:
         return fetcher.get(url, headers=headers).json()
 
     try:
-        for court in COURTS:
-            cstate = state.setdefault(court, {})
-            # Pass 1: anything filed since the newest we have. Pass 2: backlog.
-            passes = [("new", cstate.get("newest"), None), ("backlog", None, cstate.get("oldest"))]
-            for kind, after, before in passes:
-                if kind == "backlog" and cstate.get("backlog_done"):
-                    continue
-                url = search_url(court, after, before)
-                page = get_json(url)
-                results = page.get("results", [])
-                if kind == "backlog" and not results:
-                    cstate["backlog_done"] = True
-                for res in results:
-                    for op_ref in res.get("opinions", []):
-                        try:
-                            op = get_json(f"{API}/opinions/{op_ref['id']}/")
-                        except FetchError as exc:
-                            counts["errors"] += 1
-                            errors.append(f"opinion {op_ref.get('id')}: {exc}")
-                            continue
-                        text = opinion_text(op).strip()
-                        if not text:
-                            continue
-                        filed = res.get("dateFiled") or ""
-                        year = filed[:4] or "undated"
-                        cid = int(res["cluster_id"])
-                        case = res.get("caseName") or "Unknown"
-                        meta = {
-                            "id": f"fl/opinions/{cid}",
-                            "jurisdiction": "fl",
-                            "type": "opinion",
-                            "citation": "; ".join(res.get("citation") or []) or f"{case} ({filed})",
-                            "heading": case,
-                            "court_id": court,
-                            "court_name": res.get("court") or COURTS[court],
-                            "case_name": case,
-                            "docket": res.get("docketNumber") or "",
-                            "date_filed": filed,
-                            "cl_cluster_id": cid,
-                            "precedential_status": res.get("status") or "",
-                            "topic_tags": tags_for(text),
-                            "cites_statutes": cited_statutes(text),
-                            "source_url": "https://www.courtlistener.com" + res.get("absolute_url", f"/opinion/{cid}/"),
-                            "source_name": "CourtListener (Free Law Project)",
-                            "official": False,
-                            "retrieved_at": today(),
-                            "content_sha256": "",
-                            "status": "active",
-                        }
-                        rel = f"states/fl/opinions/{court}/{year}/{cid}-{slug(case)}.md"
-                        counts[write_if_changed(ROOT / rel, meta, text)] += 1
-                        break  # one opinion document per cluster (the lead opinion)
-                    filed = res.get("dateFiled")
-                    if filed:
-                        if not cstate.get("newest") or filed > cstate["newest"]:
-                            cstate["newest"] = filed
-                        if not cstate.get("oldest") or filed < cstate["oldest"]:
-                            cstate["oldest"] = filed
+        for pname, courts, query, extra_tag, share in PROFILES:
+            pstate = state.setdefault(pname, {})
+            limit = fetcher.count + max(int(budget * share), 1)
+            for court in courts:
+                cstate = pstate.setdefault(court, {})
+                passes = [("new", cstate.get("newest"), None), ("backlog", None, cstate.get("oldest"))]
+                for kind, after, before in passes:
+                    if kind == "backlog" and cstate.get("backlog_done"):
+                        continue
+                    if fetcher.count >= limit:
+                        break
+                    page = get_json(search_url(court, after, before, query))
+                    results = page.get("results", [])
+                    if kind == "backlog" and not results:
+                        cstate["backlog_done"] = True
+                    for res in results:
+                        if fetcher.count >= limit:
+                            break
+                        for op_ref in res.get("opinions", []):
+                            try:
+                                op = get_json(f"{API}/opinions/{op_ref['id']}/")
+                            except FetchError as exc:
+                                counts["errors"] += 1
+                                errors.append(f"opinion {op_ref.get('id')}: {exc}")
+                                continue
+                            text = opinion_text(op).strip()
+                            if not text:
+                                continue
+                            filed = res.get("dateFiled") or ""
+                            year = filed[:4] or "undated"
+                            cid = int(res["cluster_id"])
+                            case = res.get("caseName") or "Unknown"
+                            tags = tags_for(text) + ([extra_tag] if extra_tag else [])
+                            meta = {
+                                "id": f"fl/opinions/{cid}",
+                                "jurisdiction": "fl",
+                                "type": "opinion",
+                                "citation": "; ".join(res.get("citation") or []) or f"{case} ({filed})",
+                                "heading": case,
+                                "court_id": court,
+                                "court_name": res.get("court") or COURTS[court],
+                                "case_name": case,
+                                "docket": res.get("docketNumber") or "",
+                                "date_filed": filed,
+                                "cl_cluster_id": cid,
+                                "precedential_status": res.get("status") or "",
+                                "topic_tags": sorted(set(tags)),
+                                "cites_statutes": cited_statutes(text),
+                                "source_url": "https://www.courtlistener.com" + res.get("absolute_url", f"/opinion/{cid}/"),
+                                "source_name": "CourtListener (Free Law Project)",
+                                "official": False,
+                                "retrieved_at": today(),
+                                "content_sha256": "",
+                                "status": "active",
+                            }
+                            folder = "rule-amendments" if extra_tag else court
+                            rel = f"states/fl/opinions/{folder}/{year}/{cid}-{slug(case)}.md"
+                            counts[write_if_changed(ROOT / rel, meta, f"# {case}\n\n{text}")] += 1
+                            break  # lead opinion only
+                        filed = res.get("dateFiled")
+                        if filed:
+                            if not cstate.get("newest") or filed > cstate["newest"]:
+                                cstate["newest"] = filed
+                            if not cstate.get("oldest") or filed < cstate["oldest"]:
+                                cstate["oldest"] = filed
     except StopIteration:
         pass
     except FetchError as exc:

@@ -7,5 +7,13 @@
     "floridasupremecourt.org",
     "floridabar.org",
     "courtlistener.com"
+  ],
+  "_comment_email": "Contact emails of government offices that appear inside official text. Any other email address in a document fails validation.",
+  "official_email_domains": [
+    "gov",
+    "myflfamilies.com",
+    "flcourts.org",
+    "flcourts.gov",
+    "floridabar.org"
   ]
 }

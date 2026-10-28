@@ -17,8 +17,20 @@ from common import ROOT, check_source, normalize_body, read_doc, sha256  # noqa:
 SCHEMA = json.loads((ROOT / "schema/frontmatter.schema.json").read_text())
 PII = {
     "possible SSN": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
-    "email address": re.compile(r"\b[A-Za-z0-9._%+-]+@(?!example\.)[A-Za-z0-9.-]+\.(com|net|org|us|info)\b"),
 }
+OFFICIAL_EMAIL = json.loads((ROOT / "scripts/allowed_sources.json").read_text()).get("official_email_domains", [])
+EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[a-z]{2,})\b")
+
+
+def unofficial_emails(text: str) -> list[str]:
+    bad = []
+    for m in EMAIL.finditer(text):
+        dom = m.group(1).lower()
+        if not any(dom == d or dom.endswith("." + d) for d in OFFICIAL_EMAIL):
+            bad.append(m.group(0))
+    return bad
+
+
 COLLECTION_TYPE = {"statutes": "statute", "rules": "rule", "opinions": "opinion"}
 
 
@@ -53,6 +65,8 @@ def validate(root: Path = ROOT) -> list[str]:
         if meta.get("id") in seen_ids:
             errors.append(f"{rel}: duplicate id (also {seen_ids[meta['id']]})")
         seen_ids[meta.get("id")] = rel
+        if unofficial_emails(body):
+            errors.append(f"{rel}: email address found ({unofficial_emails(body)[0]}); review before publishing")
         for label, pat in PII.items():
             if pat.search(body):
                 errors.append(f"{rel}: {label} found; review before publishing")
