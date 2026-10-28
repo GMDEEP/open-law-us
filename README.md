@@ -11,8 +11,8 @@ The law belongs to everyone, but it is often hard to read, hard to search, and i
 | State | Collection | Status | Source |
 |---|---|---|---|
 | Florida | Statutes (all titles) | ✅ Live, updated weekly | [Online Sunshine](https://www.leg.state.fl.us/statutes/) |
-| Florida | Rules of Court (family, general practice & judicial administration) | 🛠️ Parser ready, import in progress | Supreme Court of Florida, via The Florida Bar |
-| Florida | Family-law appellate opinions | 🛠️ Ready, waiting on API access | [CourtListener](https://www.courtlistener.com/) |
+| Florida | Rules of Court: all 10 rule sets (civil, criminal, family, probate, juvenile, appellate, judicial administration, small claims, traffic, SVP commitment) | ✅ Live, 812 rules | Supreme Court of Florida, via [The Florida Bar](https://www.floridabar.org/rules/ctproc/) |
+| Florida | Family-law appellate opinions, and Supreme Court opinions amending the rules | 🔄 Filling in weekly (API rate limits) | [CourtListener](https://www.courtlistener.com/) |
 | *Your state* | — | 🙋 [Help add it](CONTRIBUTING.md) | — |
 
 The Florida Evidence Code is Chapter 90 of the Florida Statutes, so it lives with the statutes.
@@ -26,6 +26,9 @@ states/fl/
   CHANGELOG.md                        ← what changed on each update
   statutes/index.jsonl                ← one line per section
   statutes/title-vi/chapter-0061/61.13.md
+  rules/family-law/12.285.md
+  opinions/fladistctapp/2026/<id>-<case>.md
+  opinions/rule-amendments/2026/<id>-<case>.md
 ```
 
 Each document is Markdown with YAML frontmatter:

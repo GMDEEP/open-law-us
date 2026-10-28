@@ -30,9 +30,9 @@
           "update_schedule": "Checked weekly; rules are amended by the Supreme Court of Florida.",
           "copyright_note": "Rule text is a judicial edict (public domain). Bar editorial matter is excluded.",
           "path": "states/fl/rules",
-          "index": null,
-          "item_count": 0,
-          "last_changed": null
+          "index": "states/fl/rules/index.jsonl",
+          "item_count": 812,
+          "last_changed": "2026-10-27"
         },
         {
           "id": "fl-opinions",
