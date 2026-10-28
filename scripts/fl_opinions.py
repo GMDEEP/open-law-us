@@ -4,8 +4,9 @@ Requires a free CourtListener API token in COURTLISTENER_TOKEN. Without one the
 script records "skipped: token missing" and exits 0, so the weekly run still
 finishes cleanly.
 
-Free accounts are rate-limited (roughly 125 requests per day), so each run uses
-a fixed request budget: newly filed opinions first, then a slice of the
+Free accounts are rate-limited (about 5 requests a minute, 50 an hour and 125 a
+day), so requests are spaced 75 seconds apart and each run uses a fixed request
+budget (default 45, under the hourly limit): newly filed opinions first, then a slice of the
 backlog, going back in time. Progress is kept in states/fl/opinions/_state.json.
 """
 from __future__ import annotations
@@ -88,7 +89,7 @@ def run(budget: int) -> dict:
         return {"collection": "fl-opinions", "skipped": "token missing (add COURTLISTENER_TOKEN secret)",
                 "counts": {"requests": 0, "errors": 0}}
     state = json.loads(STATE_PATH.read_text()) if STATE_PATH.exists() else {}
-    fetcher = PoliteFetcher(delay=2.0)
+    fetcher = PoliteFetcher(delay=75.0, retries=4)
     headers = {"Authorization": f"Token {token}"}
     counts = {"added": 0, "changed": 0, "unchanged": 0, "errors": 0, "requests": 0}
     errors: list[str] = []
@@ -178,7 +179,7 @@ def run(budget: int) -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--budget", type=int, default=100, help="max API requests this run")
+    ap.add_argument("--budget", type=int, default=45, help="max API requests this run")
     ap.add_argument("--summary")
     args = ap.parse_args()
     result = run(args.budget)

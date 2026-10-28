@@ -71,6 +71,14 @@ class PoliteFetcher:
                 last_err = FetchError(f"HTTP {resp.status_code} for {url}")
                 if resp.status_code in (401, 403, 404):
                     break
+                if resp.status_code == 429:
+                    # Rate limited: wait as long as the server asks (capped), then retry.
+                    try:
+                        retry_after = float(resp.headers.get("Retry-After", ""))
+                    except ValueError:
+                        retry_after = 0
+                    time.sleep(min(max(retry_after, self.delay * 2, 60), 900))
+                    continue
             time.sleep(self.delay * attempt * 2)
         raise FetchError(str(last_err))
 

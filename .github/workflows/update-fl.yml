@@ -63,7 +63,7 @@ jobs:
       - name: Fetch opinions
         env:
           COURTLISTENER_TOKEN: ${{ secrets.COURTLISTENER_TOKEN }}
-        run: python scripts/fl_opinions.py --budget 100 --summary /tmp/opinions.json
+        run: python scripts/fl_opinions.py --budget 45 --summary /tmp/opinions.json
 
       - name: Safety check (opinions)
         run: python scripts/guard.py states/fl/opinions --summary /tmp/opinions.json --report /tmp/guard-opinions.json
@@ -129,6 +129,7 @@ jobs:
             echo
             echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/$RUN_ID"
             for f in /tmp/guard-*.json; do [ -f "$f" ] && { echo; echo '```json'; head -c 4000 "$f"; echo; echo '```'; }; done
+            for f in /tmp/statutes.json /tmp/opinions.json; do [ -f "$f" ] && { echo; echo "Fetch errors from $(basename "$f"):"; echo '```'; python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print('\n'.join(d.get('errors', [])[:20]) or 'none')" "$f"; echo '```'; }; done
             echo
             echo "Nothing was changed. Fix the cause (or re-run with allow_large for a new annual edition), then run the workflow again."
           } > /tmp/issue.md
