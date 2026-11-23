@@ -12,25 +12,12 @@ from pathlib import Path
 import jsonschema
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import ROOT, check_source, normalize_body, read_doc, sha256  # noqa: E402
+from common import ROOT, check_source, normalize_body, read_doc, sha256, unofficial_emails  # noqa: E402,F401
 
 SCHEMA = json.loads((ROOT / "schema/frontmatter.schema.json").read_text())
 PII = {
     "possible SSN": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
 }
-OFFICIAL_EMAIL = json.loads((ROOT / "scripts/allowed_sources.json").read_text()).get("official_email_domains", [])
-EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[a-z]{2,})\b")
-
-
-def unofficial_emails(text: str) -> list[str]:
-    bad = []
-    for m in EMAIL.finditer(text):
-        dom = m.group(1).lower()
-        if not any(dom == d or dom.endswith("." + d) for d in OFFICIAL_EMAIL):
-            bad.append(m.group(0))
-    return bad
-
-
 COLLECTION_TYPE = {"statutes": "statute", "rules": "rule", "opinions": "opinion"}
 
 
