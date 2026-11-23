@@ -18,7 +18,11 @@ USER_AGENT = (
     "contact: stewart@leadmachinellc.com)"
 )
 ROOT = Path(__file__).resolve().parent.parent
-ALLOWED = json.loads((ROOT / "scripts" / "allowed_sources.json").read_text())["domains"]
+_SOURCES = json.loads((ROOT / "scripts" / "allowed_sources.json").read_text())
+ALLOWED = _SOURCES["domains"]
+OFFICIAL_EMAIL = _SOURCES.get("official_email_domains", [])
+EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[a-z]{2,})\b")
+EMAIL_REDACTED = "[email removed]"
 
 
 class FetchError(RuntimeError):
@@ -81,6 +85,22 @@ class PoliteFetcher:
                     continue
             time.sleep(self.delay * attempt * 2)
         raise FetchError(str(last_err))
+
+
+def _official_email(match: re.Match) -> bool:
+    dom = match.group(1).lower()
+    return any(dom == d or dom.endswith("." + d) for d in OFFICIAL_EMAIL)
+
+
+def unofficial_emails(text: str) -> list[str]:
+    """Email addresses that are not on a government/court domain from allowed_sources.json."""
+    return [m.group(0) for m in EMAIL.finditer(text) if not _official_email(m)]
+
+
+def redact_emails(text: str) -> str:
+    """Replace every non-official email address with a marker (used for court opinions,
+    whose service lists name private lawyers). Uses the same pattern validate.py checks."""
+    return EMAIL.sub(lambda m: m.group(0) if _official_email(m) else EMAIL_REDACTED, text)
 
 
 def normalize_body(text: str) -> str:

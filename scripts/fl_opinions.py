@@ -23,7 +23,7 @@ from urllib.parse import urlencode
 from bs4 import BeautifulSoup
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import ROOT, FetchError, PoliteFetcher, today, write_if_changed  # noqa: E402
+from common import ROOT, FetchError, PoliteFetcher, read_doc, redact_emails, today, write_if_changed  # noqa: E402
 
 API = "https://www.courtlistener.com/api/rest/v4"
 COURTS = {"fla": "Supreme Court of Florida", "fladistctapp": "District Court of Appeal of Florida"}
@@ -48,6 +48,8 @@ PROFILES = [
     ("rule-amendments", ["fla"], RULE_QUERY, "rule-amendment", 0.4),
 ]
 STATE_PATH = ROOT / "states/fl/opinions/_state.json"
+RULE_CASE = re.compile(r"\bin re:?\s+amendments?\b", re.I)
+RULE_FOLDER = "rule-amendments"
 
 
 def slug(text: str) -> str:
@@ -81,6 +83,60 @@ def search_url(court: str, filed_after: str | None, filed_before: str | None, qu
     if filed_before:
         params["filed_before"] = filed_before
     return f"{API}/search/?{urlencode(params)}"
+
+
+def save_opinion(res: dict, text: str, court: str, rule_profile: bool, root: Path = ROOT) -> str:
+    """Write one opinion to exactly one file and return 'added'/'changed'/'unchanged'.
+
+    The family search and the rule-amendment search can both return the same Florida
+    Supreme Court opinion (e.g. probate-rule amendments that mention relocation). Every
+    "In re: Amendments" opinion lives in rule-amendments/, and if a file for the same
+    CourtListener cluster already exists anywhere, that one file is reused, so an
+    opinion is never saved twice (validate.py fails duplicate ids).
+    """
+    filed = res.get("dateFiled") or ""
+    year = filed[:4] or "undated"
+    cid = int(res["cluster_id"])
+    case = res.get("caseName") or "Unknown"
+    is_rule = rule_profile or bool(RULE_CASE.search(case))
+    # Service lists in opinions name private lawyers; keep only government emails.
+    body = redact_emails(f"# {case}\n\n{text}")
+    tags = set(tags_for(text)) | ({"rule-amendment"} if is_rule else set())
+    path = root / f"states/fl/opinions/{RULE_FOLDER if is_rule else court}/{year}/{cid}-{slug(case)}.md"
+    for other in sorted((root / "states/fl/opinions").glob(f"*/*/{cid}-*.md")):
+        if other == path:
+            continue
+        old = read_doc(other)
+        old_tags = set((old[0] if old else {}).get("topic_tags") or [])
+        if is_rule and other.parent.parent.name != RULE_FOLDER:
+            other.unlink()  # the rule-amendments copy replaces a court-folder copy
+            tags |= old_tags
+        else:
+            path = other  # keep the file that already exists
+            tags |= old_tags
+    meta = {
+        "id": f"fl/opinions/{cid}",
+        "jurisdiction": "fl",
+        "type": "opinion",
+        "citation": "; ".join(res.get("citation") or []) or f"{case} ({filed})",
+        "heading": case,
+        "court_id": court,
+        "court_name": res.get("court") or COURTS[court],
+        "case_name": case,
+        "docket": res.get("docketNumber") or "",
+        "date_filed": filed,
+        "cl_cluster_id": cid,
+        "precedential_status": res.get("status") or "",
+        "topic_tags": sorted(tags),
+        "cites_statutes": cited_statutes(text),
+        "source_url": "https://www.courtlistener.com" + res.get("absolute_url", f"/opinion/{cid}/"),
+        "source_name": "CourtListener (Free Law Project)",
+        "official": False,
+        "retrieved_at": today(),
+        "content_sha256": "",
+        "status": "active",
+    }
+    return write_if_changed(path, meta, body)
 
 
 def run(budget: int) -> dict:
@@ -128,36 +184,7 @@ def run(budget: int) -> dict:
                             text = opinion_text(op).strip()
                             if not text:
                                 continue
-                            filed = res.get("dateFiled") or ""
-                            year = filed[:4] or "undated"
-                            cid = int(res["cluster_id"])
-                            case = res.get("caseName") or "Unknown"
-                            tags = tags_for(text) + ([extra_tag] if extra_tag else [])
-                            meta = {
-                                "id": f"fl/opinions/{cid}",
-                                "jurisdiction": "fl",
-                                "type": "opinion",
-                                "citation": "; ".join(res.get("citation") or []) or f"{case} ({filed})",
-                                "heading": case,
-                                "court_id": court,
-                                "court_name": res.get("court") or COURTS[court],
-                                "case_name": case,
-                                "docket": res.get("docketNumber") or "",
-                                "date_filed": filed,
-                                "cl_cluster_id": cid,
-                                "precedential_status": res.get("status") or "",
-                                "topic_tags": sorted(set(tags)),
-                                "cites_statutes": cited_statutes(text),
-                                "source_url": "https://www.courtlistener.com" + res.get("absolute_url", f"/opinion/{cid}/"),
-                                "source_name": "CourtListener (Free Law Project)",
-                                "official": False,
-                                "retrieved_at": today(),
-                                "content_sha256": "",
-                                "status": "active",
-                            }
-                            folder = "rule-amendments" if extra_tag else court
-                            rel = f"states/fl/opinions/{folder}/{year}/{cid}-{slug(case)}.md"
-                            counts[write_if_changed(ROOT / rel, meta, f"# {case}\n\n{text}")] += 1
+                            counts[save_opinion(res, text, court, bool(extra_tag))] += 1
                             break  # lead opinion only
                         filed = res.get("dateFiled")
                         if filed:

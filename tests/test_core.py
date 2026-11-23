@@ -61,3 +61,44 @@ def test_email_check_allows_only_government_domains():
     import validate
     assert validate.unofficial_emails("Write to SAMH.jitp@myflfamilies.com or clerk@flcourts.gov") == []
     assert validate.unofficial_emails("contact jane@gmail.com") == ["jane@gmail.com"]
+
+
+def _opinion_result(cid, case, court="fla"):
+    return {"cluster_id": cid, "caseName": case, "dateFiled": "2026-05-01", "court": "Supreme Court of Florida",
+            "absolute_url": f"/opinion/{cid}/x/", "citation": [], "docketNumber": "SC26-1", "status": "Published"}
+
+
+def test_redacts_private_emails_but_keeps_government_ones():
+    assert common.redact_emails("Served: malaimo@porterwright.com, clerk@flcourts.org") == \
+        "Served: [email removed], clerk@flcourts.org"
+
+
+def test_opinion_found_by_both_searches_is_saved_once(tmp_path):
+    import fl_opinions
+    import validate
+    (tmp_path / "states").mkdir()
+    res = _opinion_result(11035060, "In re: Amendments to Florida Probate Rules 5.171 and 5.205")
+    text = "Relocation of the ward. Comments from malaimo@porterwright.com."
+    # family search first (court folder), then the rule-amendment search
+    assert fl_opinions.save_opinion(res, text, "fla", False, root=tmp_path) == "added"
+    assert fl_opinions.save_opinion(res, text, "fla", True, root=tmp_path) == "unchanged"
+    files = list((tmp_path / "states/fl/opinions").rglob("*.md"))
+    assert [f.parent.parent.name for f in files] == ["rule-amendments"]
+    meta, body = common.read_doc(files[0])
+    assert "rule-amendment" in meta["topic_tags"] and "relocation" in meta["topic_tags"]
+    assert "porterwright" not in body
+    assert validate.validate(tmp_path) == []
+
+
+def test_existing_court_copy_is_moved_into_rule_amendments(tmp_path):
+    import fl_opinions
+    import validate
+    (tmp_path / "states").mkdir()
+    # a name the rule regex does not match, so the family pass files it under fla/
+    res = _opinion_result(42, "Amendments to the Florida Family Law Rules")
+    fl_opinions.save_opinion(res, "Parenting plan forms.", "fla", False, root=tmp_path)
+    fl_opinions.save_opinion(res, "Parenting plan forms.", "fla", True, root=tmp_path)
+    files = list((tmp_path / "states/fl/opinions").rglob("*.md"))
+    assert [f.parent.parent.name for f in files] == ["rule-amendments"]
+    assert common.read_doc(files[0])[0]["topic_tags"] == ["parenting-plan", "rule-amendment"]
+    assert validate.validate(tmp_path) == []
