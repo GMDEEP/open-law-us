@@ -43,9 +43,9 @@
           "update_schedule": "Checked weekly for newly filed opinions.",
           "copyright_note": "Judicial opinions are public domain. Free Law Project does not endorse this project.",
           "path": "states/fl/opinions",
-          "index": null,
-          "item_count": 0,
-          "last_changed": null
+          "index": "states/fl/opinions/index.jsonl",
+          "item_count": 36,
+          "last_changed": "2026-11-24"
         }
       ]
     }

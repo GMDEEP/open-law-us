@@ -1,0 +1,16 @@
+{
+  "family": {
+    "fla": {
+      "newest": "2026-10-15",
+      "oldest": "2024-03-15"
+    },
+    "fladistctapp": {}
+  },
+  "rule-amendments": {
+    "fla": {
+      "newest": "2026-11-12",
+      "oldest": "2026-10-01"
+    }
+  },
+  "last_run": "2026-11-24"
+}
