@@ -11,3 +11,8 @@ Each update adds an entry here: the date, what was checked, and how many documen
 
 - **fl-statutes**: initial import, 24,993 sections (2026 edition).
 - **fl-rules**: initial import, 812 rules across all 10 rule sets (editions dated Jan 2024 to Oct 15, 2026).
+
+## 2026-11-24
+
+- **fl-statutes**: 0 added, 0 changed, 0 removed, 24993 unchanged (688 requests, 0 errors)
+- **fl-opinions**: 36 added, 0 changed, 0 removed, 6 unchanged (45 requests, 0 errors)
